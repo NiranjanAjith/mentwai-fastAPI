@@ -34,11 +34,10 @@ class CacheManager:
             async with self._connection_lock:
                 if self.redis is None:
                     try:
-                        self.redis = aioredis.from_url(
+                        self.redis = await aioredis.create_redis_pool(
                             self.redis_url,
                             encoding="utf-8",
-                            decode_responses=True,
-                            max_connections=self.pool_size
+                            maxsize=self.pool_size
                         )
                         # Test connection
                         await self.redis.ping()
@@ -202,7 +201,6 @@ class CacheManager:
         """Increment conversation count for session."""
         try:
             await self._ensure_connection()
-            key = f"session_state:{session_id}"
             
             # Try to increment atomically
             count_key = f"session_count:{session_id}"
@@ -220,7 +218,7 @@ class CacheManager:
         try:
             await self._ensure_connection()
             pong = await self.redis.ping()
-            return pong is True
+            return pong == b'PONG'
         except Exception as e:
             logger.error(f"Redis health check failed: {e}")
             return False
@@ -228,7 +226,8 @@ class CacheManager:
     async def close(self):
         """Close Redis connection."""
         if self.redis:
-            await self.redis.close()
+            self.redis.close()
+            await self.redis.wait_closed()
 
 # Global instance
 cache_manager = CacheManager()
