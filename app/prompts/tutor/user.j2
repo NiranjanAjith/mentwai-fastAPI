@@ -1,0 +1,4 @@
+Q: {{ user_query }}
+Relevant:
+{% for doc in rag_documents %}- {{ doc }}{% endfor %}
+Answer clearly and helpfully.
