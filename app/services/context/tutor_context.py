@@ -9,7 +9,8 @@ from app.services.tools.tables.textbook import (
     TextBook,
     Subject,
     EducationalBoard,
-    Standard
+    Standard,
+    TextBookStandardLink
 )
 from app.services.tools.llm import llm_client
 from app.framework.context import BaseContext
@@ -122,9 +123,13 @@ class TutorContext(BaseContext):
 
                 try:
                     # Get first standard (many-to-many)
-                    std_link_stmt = select(Standard).where(Standard.id == textbook.standard_id)
-                    result = await session.execute(std_link_stmt)
-                    standards = result.scalars().first()
+                    stmt = (
+                        select(Standard)
+                        .join(TextBookStandardLink, TextBookStandardLink.standard_id == Standard.id)
+                        .where(TextBookStandardLink.textbook_id == textbook.id)
+                    )
+                    result = await session.execute(stmt)
+                    standards = result.scalars().all()
                     self.standard = standards[0].name if standards else None
                     response["Success_Log"] += f"Standard {self.standard} found."
                 except Exception as e:
