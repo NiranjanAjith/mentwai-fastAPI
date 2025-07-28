@@ -52,13 +52,13 @@ class PineconeProvider(VectorTool):
             logger.error("[VectorDB] Pinecone index or inference client not initialized.")
             return False
 
-    async def run(self, query: str, namespace:str, filters: dict= {}, top_k: int = 3) -> AsyncGenerator[list[Dict], None]:
+    async def run(self, query: str, namespace:str, filters: dict= {}, top_k: int = 3):
         try:
             self.pinecone_namespace = namespace
-            results = self.query(query, filters, top_k)
-            yield results
+            results = await self.query(query, filters, top_k)
+            return results
         except Exception as e:
-            yield f"[VectorDB Error] {str(e)}"
+            return f"[VectorDB Error] {str(e)}"
 
     async def query(self, query: str, filters: dict, top_k: int = 3) -> list[Dict]:
         if not self.index:
@@ -125,7 +125,7 @@ class PineconeProvider(VectorTool):
             distance = match.get('score', 1.0)
             metadata = match.get('metadata', {}).copy()
             relevance = round(1 - distance, 4)
-            text = metadata.pop('text', '')
+            text = metadata.get('text', '')
 
             formatted.append({
                 "relevance": relevance,

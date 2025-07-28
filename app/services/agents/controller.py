@@ -1,9 +1,12 @@
 import json
-import re
+import regex
 from datetime import datetime
 from typing import Dict, Any, Optional
 
 from app.framework.agents import Agent
+
+from app.services.tools.llm import llm_client
+from app.services.tools.prompt import prompt_render
 
 
 class JailbreakDetector(Agent):
@@ -21,7 +24,7 @@ class JailbreakDetector(Agent):
             history = self.get_from_context("history", [])[-4:]
 
             # Prepare system prompt
-            prompt_tool = self.get_tool("prompt")
+            prompt_tool = prompt_render
             system_prompt = prompt_tool.render_from_file(
                 template_path="jailbreak/system.j2"
             )
@@ -30,7 +33,7 @@ class JailbreakDetector(Agent):
                 variables={"user_query": query}
             )
 
-            llm_tool = self.get_tool("llm")
+            llm_tool = llm_client
 
             # Run LLM
             response_text = ""
@@ -44,7 +47,7 @@ class JailbreakDetector(Agent):
             ):
                 response_text += chunk.get("content", "")
 
-            match = re.search(r"\{(?:[^{}]|(?R))*\}", response_text, re.DOTALL)
+            match = regex.search(r"\{(?:[^{}]|(?R))*\}", response_text, regex.DOTALL)
             if not match:
                 return self._failure("Malformed response. JSON not found.")
 

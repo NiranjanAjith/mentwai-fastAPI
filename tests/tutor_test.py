@@ -6,8 +6,8 @@ import base64
 
 client = TestClient(app)
 
-student_id = "0148e9a4-91fd-4c32-8d43-0c7005b0b7b3"
-textbook_id = "9e3628e8-8114-4db4-99a7-bf72710037d8"
+student_id = "92185c74-db6b-45b3-aa72-3946852f3fbd"
+textbook_id = "1dd145b4-d918-4316-b3b0-8659d66c2244"
 token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY4ODkyMDI2LCJpYXQiOjE3NTA3NDgwMjYsImp0aSI6IjNlZDg0ZmJlOWRkMTQ3MDFiZDIwZDMwMDc4N2FmMTM0IiwidXNlcl9pZCI6Mn0.-tTDzztYwVq1558NUN8CLMYVUY4OskQZX-lpEH8ZV_I"
 
 def test_invalid_token_ws():
@@ -59,7 +59,7 @@ def test_interactive_ws():
                 except Exception as e:
                     print(f"❌ Error receiving response: {e}")
                     print("type: ", type(response).__name__)
-                if "error" in response:
+                if "error" in response or not response.get("is_end", True):
                     break
 
 # You can add more tests for valid tokens and orchestrator logic by mocking dependencies.

@@ -98,12 +98,12 @@ class TutorOrchestrator:
             return []
 
         # Use vector DB to fetch related textbook chunks
-        results = await vector_db.query(
+        results = await vector_db.run(
             query=query,
             namespace=self.context.textbook_code,
         )
 
         for doc in results:
-            self.context.add_rag_document(doc["text"])
+            self.context.add_rag_document(doc if isinstance(doc, str) else doc.get("text", ""))
 
         logger.info(f"[VECTOR] Retrieved {len(results)} documents.")

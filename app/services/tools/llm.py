@@ -132,10 +132,11 @@ class AzureLLM(LLMProvider):
         logger.info(f"Calling Azure LLM (stream={stream}) with model {self.model}")
 
         if stream:
-            return self._stream_response(messages, prompt, temperature, max_tokens)
+            async for chunk in self._stream_response(messages, prompt, temperature, max_tokens):
+                yield chunk
         else:
-            return self._non_streaming_response(messages, prompt, temperature, max_tokens)
-
+            async for chunk in self._non_streaming_response(messages, prompt, temperature, max_tokens):
+                yield chunk
     async def _stream_response(
         self,
         messages: List,

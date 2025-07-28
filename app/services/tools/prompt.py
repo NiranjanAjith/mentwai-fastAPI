@@ -20,7 +20,7 @@ class PromptBuilderTool(Tool):
     def confirm_setup(self):
         pass
 
-    def render_from_file(self, template_path: str, variables: Dict) -> str:
+    def render_from_file(self, template_path: str, variables: Dict= {}) -> str:
         """
         Render a prompt from a Jinja template file, given relative path and variables.
         """
