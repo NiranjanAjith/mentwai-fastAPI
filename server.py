@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 AI Tutor Service starting up...")
     """Initialize AI services on startup."""
     logger.info("🚀 AI Tutor Service starting up...")
     logger.info("✅ Parallel agents system initialized")

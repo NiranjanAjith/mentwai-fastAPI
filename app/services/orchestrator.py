@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from uuid import UUID
 
 from app.services.context.tutor_context import TutorContext
 from app.services.agents.controller import JailbreakDetector
@@ -9,24 +10,54 @@ from app.services.tools.image import vision_client
 
 logger = logging.getLogger(__name__)
 
-class TutorOrchestrator():
-    def __init__(self, student_id: int, textbook_id: int, session_id: int = None):
-        super().__init__(project_name="tutor")
-        self.context = TutorContext()
+class TutorOrchestrator:
+    def __init__(self, student_id: UUID, textbook_id: UUID, context: TutorContext):
         self.student_id = student_id
         self.textbook_id = textbook_id
+        self.context = context
+        self.jailbreak_agent = None
+        self.tutor_agent = None
+
+    @classmethod
+    async def create(cls, student_id: UUID, textbook_id: UUID, session_id: UUID = None):
+        response = {}
+        try:
+            try:
+                context = TutorContext()
+            except Exception as e:
+                logger.error(f"[!] Failed to initialize context: {e}")
+                raise ValueError(f"Failed to initialize context. Please check your configuration. (Error: {e})")
+            try:
+                jailbreak_agent = JailbreakDetector(context)
+            except Exception as e:
+                logger.error(f"[!] Failed to initialize jailbreak agent: {e}")
+                raise ValueError(f"Failed to initialize jailbreak agent. Please check your configuration. (Error: {e})")
+            try:
+                tutor_agent = TutorAgent(context)
+            except Exception as e:
+                logger.error(f"[!] Failed to initialize tutor agent: {e}")
+                raise ValueError(f"Failed to initialize tutor agent. Please check your configuration. (Error: {e})")
+        except Exception as e:
+            logger.error(f"[!] Failed to initialize agents: {e}")
+            raise ValueError(f"Failed to initialize agents. Please check your configuration. (Error: {e})")
+        
         if session_id:
-            #TODO: Load session history if available
-            # history = load_history(session_id)
-            # self.context.add_to_history(history)
-            pass
+            context.session_id = session_id
+            #TODO History loading
 
-    async def setup(self):
-        # Initialize context (loads student and textbook, sets state)
-        await self.context.initialize(self.student_id, self.textbook_id)
+        try:
+            success = await context.initialize(student_id, textbook_id)
+            response.update(success)
+            response["Success_Log"] += "Orchestrator context initialized successfully. (orchestrator.py)"
+        except Exception as e:
+            logger.error(f"[!] Failed to initialize context: {e}")
+            raise ValueError(f"Failed to initialize context. Please check student and textbook IDs. (Error: {e})")
 
-        self.jailbreak_agent = JailbreakDetector(self.context)
-        self.tutor_agent = TutorAgent(self.context)
+        self = cls(student_id, textbook_id, context)
+        self.jailbreak_agent = jailbreak_agent
+        self.tutor_agent = tutor_agent
+
+        return self, response
 
     async def run(self, user_message: str, images: list = None):
         full_user_query = user_message

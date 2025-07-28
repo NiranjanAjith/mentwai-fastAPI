@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
 from app.framework.context import BaseContext
+import logging
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------------
@@ -15,7 +17,7 @@ class Agent(ABC):
     def __init__(self, context: BaseContext, name: str = "base_agent"):
         self.name = name
         self.context = context
-        self.logger = context.get_logger(self.name)
+        self.logger = logger
 
     def update_context(self, key: str, value: Any):
         self.context.set_state(key, value)

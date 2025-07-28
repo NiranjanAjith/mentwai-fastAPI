@@ -1,21 +1,19 @@
 from datetime import timezone, datetime
-from typing import Dict, List
+from typing import List
+from uuid import UUID
 
 from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tools.tables.student import Student, StudentTokenUsage
 from app.services.tools.tables.textbook import (
     TextBook,
     Subject,
     EducationalBoard,
-    Standard,
-    Medium,
-    textbook_standard_link,
-    textbook_medium_link
+    Standard
 )
 from app.services.tools.llm import llm_client
 from app.framework.context import BaseContext
+from app.core.config import settings
 
 
 
@@ -23,90 +21,134 @@ class TutorContext(BaseContext):
     def __init__(self, project_name: str = "tutor"):
         super().__init__(project_name=project_name)
 
-        # RAG documents
         self.rag_documents: List[str] = []
 
-    async def initialize(self, student_id: int, textbook_id: int):
+    async def initialize(self, student_id: UUID, textbook_id: UUID):
         self.student_id = student_id
-        self.student = await self._validate_student(student_id)
-        self.textbook = await self._validate_textbook(textbook_id)
+        response = {}
+        try:
+            self.student, success = await self._validate_student(student_id)
+            response.update(success)
+        except Exception as e:
+            raise ValueError(f"Failed to validate student: (Tutor Context initialize Error: {e})")
+        
+        try:
+            self.textbook, success = await self._validate_textbook(textbook_id)
+            response.update(success)
+        except Exception as e:
+            raise ValueError(f"Failed to validate textbook: (Tutor Context initialize Error: {e})")
+        
+        response["Success_Log"] += "TutorContext initialized successfully. (tutorcontext.py)"
+        return response
 
-    async def _validate_student(self, user_id: int, session: AsyncSession):
-        stmt = select(Student).where(Student.id == user_id)
-        result = await session.exec(stmt)
-        student = result.first()
+    async def _validate_student(self, user_id: int):
+        today = datetime.now(timezone.utc).date()
+        response = {"Success_Log": ""}
 
-        if not student:
-            raise ValueError("Invalid student ID. Connection denied.")
+        async with settings.get_session() as session:
+            try:
+                stmt = select(Student).where(Student.id == user_id)
+                result = await session.execute(stmt)
+                student = result.scalars().first()
+                response["Success_Log"] += f"Student {student.name} found."
+            except Exception as e:
+                raise ValueError(f"Invalid student ID for Student table. Connection denied. (_validate_student() Error: {e})")
+
+            try:
+                stmt = select(StudentTokenUsage).where(
+                    StudentTokenUsage.date_added == today,
+                    StudentTokenUsage.student_id == student.id
+                )
+                result = await session.execute(stmt)
+                student_token_usage = result.scalars().first()
+
+
+                if not student_token_usage:
+                    student_token_usage = StudentTokenUsage(
+                        student_id=student.id,
+                        date_added=today
+                    )
+                    response["Success_Log"] += f"New StudentTokenUsage created for today."
+                else:
+                    response["Success_Log"] += f"Student token usage for today found."
+
+                    session.add(student_token_usage)
+                    await session.commit()
+                    await session.refresh(student_token_usage)
+                    response["Success_Log"] += f"StudentTokenUsage committed to DB."
+            except Exception as e:
+                raise ValueError(f"Invalid student ID for StudentTokenUsage table. Connection denied. (_validate_student() Error: {e})")
 
         self.student = student
         self.student_name = student.name
         self.student_total_token_usage = student.total_token_usage
-
-        today = datetime.now(timezone.utc).date()
-
-        stmt_usage = select(StudentTokenUsage).where(
-            StudentTokenUsage.date_added == today,
-            StudentTokenUsage.student_id == student.id
-        )
-        result_usage = await session.exec(stmt_usage)
-        student_token_usage = result_usage.first()
-
-        if not student_token_usage:
-            student_token_usage = StudentTokenUsage(
-                student_id=student.id,
-                date_added=today
-            )
-            session.add(student_token_usage)
-            await session.commit()
-            await session.refresh(student_token_usage)
-
         self.student_token_usage = student_token_usage
-        return student
+        response["Success_Log"] += f"Student {student.name} initialized successfully."
+
+        return student, response
 
     async def _validate_textbook(self, textbook_id: int):
         try:
-            # Get textbook with joined subject and board
-            statement = select(TextBook).where(TextBook.id == textbook_id)
-            textbook = (await self.session.exec(statement)).first()
-            if not textbook:
-                raise ValueError("Invalid textbook ID. Connection denied.")
+            response = {"Success_Log": ""}
+            async with settings.get_session() as session:
+                try:
+                    # Get textbook with joined subject and board
+                    statement = select(TextBook).where(TextBook.id == textbook_id)
+                    result = await session.execute(statement)
+                    textbook = result.scalars().first()
+                    response["Success_Log"] += f"Textbook {textbook.name} found."
+                except Exception as e:
+                        raise ValueError(f"Invalid textbook ID for Textbook table. Connection denied. (_validate_textbook() Error: {e})")
+
+                try:
+                    # Get subject
+                    subject_stmt = select(Subject).where(Subject.id == textbook.subject_id)
+                    result = await session.execute(subject_stmt)
+                    subject = result.scalars().first()
+                    self.subject_name = subject.name
+                    response["Success_Log"] += f"Subject {subject.name} found."
+                except Exception as e:
+                    raise ValueError(f"Invalid textbook ID for Subject table. Connection denied. (_validate_textbook() Error: {e})")
+
+                try:
+                    # Get educational board
+                    board_stmt = select(EducationalBoard).where(EducationalBoard.id == textbook.educational_board_id)
+                    result = await session.execute(board_stmt)
+                    board = result.scalars().first()
+                    self.educational_board = board.name
+                    response["Success_Log"] += f"Educational board {board.name} found."
+                except Exception as e:
+                    raise ValueError(f"Invalid textbook ID for EducationalBoard table. Connection denied. (_validate_textbook() Error: {e})")
+
+                try:
+                    # Get first standard (many-to-many)
+                    std_link_stmt = select(Standard).where(Standard.id == textbook.standard_id)
+                    result = await session.execute(std_link_stmt)
+                    standards = result.scalars().first()
+                    self.standard = standards[0].name if standards else None
+                    response["Success_Log"] += f"Standard {self.standard} found."
+                except Exception as e:
+                    raise ValueError(f"Invalid textbook ID for Standard table. Connection denied. (_validate_textbook() Error: {e})")
 
             self.textbook = textbook
             self.textbook_code = textbook.code
 
-            # Get subject
-            subject_stmt = select(Subject).where(Subject.id == textbook.subject_id)
-            subject = (await self.session.exec(subject_stmt)).first()
-            self.subject_name = subject.name
-
-            # Get educational board
-            board_stmt = select(EducationalBoard).where(EducationalBoard.id == textbook.educational_board_id)
-            board = (await self.session.exec(board_stmt)).first()
-            self.educational_board = board.name
-
-            # Get first standard (many-to-many)
-            std_link_stmt = select(Standard).join(textbook_standard_link).where(
-                textbook_standard_link.c.textbook_id == textbook.id
-            )
-            standards = (await self.session.exec(std_link_stmt)).all()
-            self.standard = standards[0].name if standards else None
-
-            return textbook
+            return textbook, response
 
         except Exception as e:
-            raise ValueError("Invalid textbook ID. Connection denied.") from e
+            raise ValueError(f"Invalid textbook ID. Connection denied. (_validate_textbook() Error: {e})")
 
-    async def update_student_token_usage(self, token_count: int, session: AsyncSession):
+    async def update_student_token_usage(self, token_count: int):
         self.student_total_token_usage += token_count
         self.student.total_token_usage = self.student_total_token_usage
 
         self.student_token_usage.token_used += token_count
 
-        session.add(self.student)
-        session.add(self.student_token_usage)
+        async with settings.get_session() as session:
+            session.add(self.student)
+            session.add(self.student_token_usage)
 
-        await session.commit()
+            await session.commit()
 
         self.logger.info("[TOKENS] Token usage updated in DB.")
 

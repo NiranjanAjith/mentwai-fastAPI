@@ -6,6 +6,7 @@ Loads environment variables and provides centralized settings.
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
 import jwt
 from jwt import InvalidTokenError, ExpiredSignatureError
@@ -33,11 +34,15 @@ class Settings:
         f"{BASE_MODEL_PATH}.textbook"
     ]
     
-    async def get_session():
-        engine = create_async_engine(Settings.DB_URL, echo=True)
-        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-        async with async_session() as session:
-            yield session
+    @asynccontextmanager
+    async def get_session(self):
+        try:
+            engine = create_async_engine(Settings.DB_URL, echo=True)
+            async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+            async with async_session() as session:
+                yield session
+        except Exception as e:
+            raise RuntimeError(f"Database connection error. (SQLAlchemy Sessionmaker Error: {e})")
 
     TORTOISE_ORM = {
         "connections": {

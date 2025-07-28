@@ -11,7 +11,7 @@ class JailbreakDetector(Agent):
     description: str = "Screens user input for jailbreak attempts."
 
     def __init__(self, context):
-        super().__init__(context, required_tools=["llm", "prompt"], name=self.name)
+        super().__init__(context, name=self.name)
 
     async def run(self, query: Optional[str]) -> Dict[str, Any]:
         try:

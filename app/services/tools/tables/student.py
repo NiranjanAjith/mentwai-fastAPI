@@ -28,7 +28,7 @@ class StudentTokenUsage(SQLModel, table=True):
     __tablename__ = "students_student_token_usage"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    student_id: int = Field(foreign_key="students_student.id")
+    student_id: UUID = Field(foreign_key="students_student.id")
     token_used: int = 0
     image_count: int = 0
     date_added: Optional[date] = None
