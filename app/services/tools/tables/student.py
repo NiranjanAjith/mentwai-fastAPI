@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 class Student(SQLModel, table=True):
     __tablename__ = "students_student"
 
-    id: int = Field(primary_key=True)
+    id: UUID = Field(primary_key=True)
     username: str
     name: str
     admission_number: str

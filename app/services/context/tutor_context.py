@@ -26,33 +26,31 @@ class TutorContext(BaseContext):
 
     async def initialize(self, student_id: UUID, textbook_id: UUID):
         self.student_id = student_id
-        response = {}
+        self.textbook_id = textbook_id
+
         try:
-            self.student, success = await self._validate_student(student_id)
-            response.update(success)
+            self.student = await self._validate_student(student_id)
         except Exception as e:
             raise ValueError(f"Failed to validate student: (Tutor Context initialize Error: {e})")
         
         try:
-            self.textbook, success = await self._validate_textbook(textbook_id)
-            response.update(success)
+            self.textbook = await self._validate_textbook(textbook_id)
         except Exception as e:
             raise ValueError(f"Failed to validate textbook: (Tutor Context initialize Error: {e})")
         
-        response["Success_Log"] += "TutorContext initialized successfully. (tutorcontext.py)"
-        return response
+        self.log["success"].append(f"(tutor_context.py) initialized successfully for student {self.student.name} and textbook {self.textbook.name}.")
 
     async def _validate_student(self, user_id: int):
         today = datetime.now(timezone.utc).date()
-        response = {"Success_Log": ""}
 
         async with settings.get_session() as session:
             try:
                 stmt = select(Student).where(Student.id == user_id)
                 result = await session.execute(stmt)
                 student = result.scalars().first()
-                response["Success_Log"] += f"Student {student.name} found."
+                self.log["success"].append(f"(TutorContext) Student {student.name} found.")
             except Exception as e:
+                self.log["error"].append(f"Error (_validate_student()): {e}")
                 raise ValueError(f"Invalid student ID for Student table. Connection denied. (_validate_student() Error: {e})")
 
             try:
@@ -69,37 +67,38 @@ class TutorContext(BaseContext):
                         student_id=student.id,
                         date_added=today
                     )
-                    response["Success_Log"] += f"New StudentTokenUsage created for today."
+                    self.log["success"].append(f"(TutorContext) New StudentTokenUsage created for today.")
                 else:
-                    response["Success_Log"] += f"Student token usage for today found."
+                    self.log["success"].append(f"(TutorContext) Student token usage for today found.")
 
                     session.add(student_token_usage)
                     await session.commit()
                     await session.refresh(student_token_usage)
-                    response["Success_Log"] += f"StudentTokenUsage committed to DB."
+                    self.log["success"].append(f"(TutorContext) StudentTokenUsage committed to DB.")
             except Exception as e:
+                self.log["error"].append(f"Error (_validate_student()): {e}")
                 raise ValueError(f"Invalid student ID for StudentTokenUsage table. Connection denied. (_validate_student() Error: {e})")
 
         self.student = student
         self.student_name = student.name
         self.student_total_token_usage = student.total_token_usage
         self.student_token_usage = student_token_usage
-        response["Success_Log"] += f"Student {student.name} initialized successfully."
+        self.log["success"].append(f"(TutorContext) Student {student.name} initialized successfully.")
 
-        return student, response
+        return student
 
     async def _validate_textbook(self, textbook_id: int):
         try:
-            response = {"Success_Log": ""}
             async with settings.get_session() as session:
                 try:
                     # Get textbook with joined subject and board
                     statement = select(TextBook).where(TextBook.id == textbook_id)
                     result = await session.execute(statement)
                     textbook = result.scalars().first()
-                    response["Success_Log"] += f"Textbook {textbook.name} found."
+                    self.log["success"].append(f"(TutorContext) Textbook {textbook.name} found.")
                 except Exception as e:
-                        raise ValueError(f"Invalid textbook ID for Textbook table. Connection denied. (_validate_textbook() Error: {e})")
+                    self.log["error"].append(f"Error (_validate_textbook()): {e}")
+                    raise ValueError(f"Invalid textbook ID for Textbook table. Connection denied. (_validate_textbook() Error: {e})")
 
                 try:
                     # Get subject
@@ -107,8 +106,9 @@ class TutorContext(BaseContext):
                     result = await session.execute(subject_stmt)
                     subject = result.scalars().first()
                     self.subject_name = subject.name
-                    response["Success_Log"] += f"Subject {subject.name} found."
+                    self.log["success"].append(f"(TutorContext) Subject {subject.name} found.")
                 except Exception as e:
+                    self.log["error"].append(f"Error (_validate_textbook()): {e}")
                     raise ValueError(f"Invalid textbook ID for Subject table. Connection denied. (_validate_textbook() Error: {e})")
 
                 try:
@@ -117,8 +117,9 @@ class TutorContext(BaseContext):
                     result = await session.execute(board_stmt)
                     board = result.scalars().first()
                     self.educational_board = board.name
-                    response["Success_Log"] += f"Educational board {board.name} found."
+                    self.log["success"].append(f"(TutorContext) Educational board {board.name} found.")
                 except Exception as e:
+                    self.log["error"].append(f"Error (_validate_textbook()): {e}")
                     raise ValueError(f"Invalid textbook ID for EducationalBoard table. Connection denied. (_validate_textbook() Error: {e})")
 
                 try:
@@ -131,16 +132,18 @@ class TutorContext(BaseContext):
                     result = await session.execute(stmt)
                     standards = result.scalars().all()
                     self.standard = standards[0].name if standards else None
-                    response["Success_Log"] += f"Standard {self.standard} found."
+                    self.log["success"].append(f"(TutorContext) Standard {self.standard} found." if self.standard else "No standards found for textbook.")
                 except Exception as e:
+                    self.log["error"].append(f"Error (_validate_textbook()): {e}")
                     raise ValueError(f"Invalid textbook ID for Standard table. Connection denied. (_validate_textbook() Error: {e})")
 
             self.textbook = textbook
             self.textbook_code = textbook.code
 
-            return textbook, response
+            return textbook
 
         except Exception as e:
+            self.log["error"].append(f"Error validating textbook (_validate_textbook() final): {e}")
             raise ValueError(f"Invalid textbook ID. Connection denied. (_validate_textbook() Error: {e})")
 
     async def update_student_token_usage(self, token_count: int):
@@ -149,12 +152,18 @@ class TutorContext(BaseContext):
 
         self.student_token_usage.token_used += token_count
 
-        async with settings.get_session() as session:
-            session.add(self.student)
-            session.add(self.student_token_usage)
-
-            await session.commit()
-
+        try:
+            async with settings.get_session() as session:
+                session.add(self.student)
+                session.add(self.student_token_usage)
+                await session.commit()
+                await session.refresh(self.student)
+                await session.refresh(self.student_token_usage)
+                self.log["success"].append(f"(TutorContext) Student token usage updated in DB: {self.student_token_usage.token_used} tokens used today.")
+        except Exception as e:
+            self.log["error"].append(f"Error updating student token usage: {e}")
+            raise ValueError(f"Failed to update student token usage in DB. (_update_student_token_usage Error: {e})")
+        
         self.logger.info("[TOKENS] Token usage updated in DB.")
 
     # RAG Documents
@@ -184,7 +193,7 @@ class TutorContext(BaseContext):
             "Focus on the main topics discussed and any important conclusions or decisions made."
         )
         messages = self.get_history()
-        summary = llm_client.get_response(
+        summary = llm_client.run(
             prompt=summary_prompt,
             context=messages,
             temperature=0.3

@@ -1,6 +1,7 @@
 import logging
 from uuid import uuid4, UUID
 from typing import Dict
+from datetime import datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.orchestrator import TutorOrchestrator
@@ -13,10 +14,12 @@ logger = logging.getLogger(__name__)
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # Extract query params manually
     student_id = websocket.query_params.get("student_id")
     textbook_id = websocket.query_params.get("textbook_id")
     token = websocket.query_params.get("token")
+    debug = websocket.query_params.get("debug", "false").lower() == "true"
     await websocket.accept()
     session_id = str(uuid4())
 
@@ -32,12 +35,11 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     try:
-        orchestrator, response = await TutorOrchestrator.create(student_id=student_id, textbook_id=textbook_id)
+        orchestrator, log = await TutorOrchestrator.create(student_id=student_id, textbook_id=textbook_id)
         active_sessions[session_id] = orchestrator
         logger.info(f"[+] New session {session_id}")
         await websocket.send_json({
-            "response": response,
-            "response_type": type(response).__name__
+            "log": log
         })
     except Exception as e:
         logger.error(f"[!] Failed to initialize session {session_id}: {e}")
@@ -50,21 +52,33 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     try:
+        payload = {}
         while True:
             data = await websocket.receive_json()
             user_query = data.get("message")
+            print(f"Received query: {user_query}\n******************************************************************")
 
             async for response in orchestrator.run(user_query):
                 if response:
-                    await websocket.send_json({
-                        "response": response,
-                        "response_type": type(response).__name__
-                    })
+                    payload["response"] = response
+                    payload["response_type"] = type(response).__name__
+                    if debug:
+                        payload["Log"] = log
+
+                    await websocket.send_json(payload)
+
+            end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            await websocket.send_json({
+                "is_end": True,
+                "session_id": session_id,
+                "start_time": start_time,
+                "end_time": end_time,
+                "message": "Message Complete successfully."
+            })
 
     except WebSocketDisconnect:
         logger.info(f"[-] Session {session_id} disconnected.")
     finally:
-        #TODO: Save session history
         await websocket.close()
         active_sessions.pop(session_id, None)
 

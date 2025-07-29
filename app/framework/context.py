@@ -18,6 +18,11 @@ class BaseContext:
         self.session_id = str(uuid.uuid4())
         self.allowed_tools: Dict[str, Any] = {}
         self.agents: Dict[str, Callable] = {}
+        self.log: Dict[List] = {
+            "success":["(framework/context.py) Context inheritted."],
+            "error": [],
+            "info": []
+        }
 
         # Variables
         self.user_query = ""
