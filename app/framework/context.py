@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
-import logging
+from typing import Any, Dict, List, Optional
+from app.core.constants import *
+from app.core.logging import get_logger
 
 
 
@@ -13,15 +14,14 @@ import logging
 class BaseContext:
     def __init__(self, project_name: str):
         # Constants
-        self.logger = logging.getLogger(f"context.{project_name}")
+        self.logger = get_logger(f"context.{project_name}")
         self.project_name = project_name
         self.session_id = str(uuid.uuid4())
         self.allowed_tools: Dict[str, Any] = {}
-        self.agents: Dict[str, Callable] = {}
         self.log: Dict[List] = {
-            "success":["(framework/context.py) Context inheritted."],
-            "error": [],
-            "info": []
+            SUCCESS_LOG:["(framework/context.py) Context inheritted."],
+            ERROR_LOG: [],
+            INFO_LOG: []
         }
 
         # Variables
@@ -68,6 +68,27 @@ class BaseContext:
 
     def get_route_map(self) -> List[Dict[str, Any]]:
         return list(self.route_map)
+    
+    # logging
+    def success(self, message: str):
+        self.log[SUCCESS_LOG].append(message)
+        self.logger.info(f"[SUCCESS] {message}")
+
+    def error(self, message: str):
+        self.log[ERROR_LOG].append(message)
+        self.logger.error(f"[ERROR] {message}")
+
+    def info(self, message: str):
+        self.log[INFO_LOG].append(message)
+        self.logger.info(f"[INFO] {message}")
+
+    def save_log(self, log: Dict[str, List[str]]):
+        for key, messages in log.items():
+            if key in self.log:
+                self.log[key].extend(messages)
+            else:
+                self.log[key] = messages
+        self.logger.debug(f"[LOG] Saved log: {log}")
 
     # Utility
     def reset_context(self):
@@ -76,12 +97,12 @@ class BaseContext:
         self.route_map.clear()
         self.logger.info("[SYSTEM] Context reset.")
 
+
     def summary(self) -> Dict[str, Any]:
         return {
             "project": self.project_name,
             "session_id": self.session_id,
             "history_length": len(self.history),
-            "tool_count": len(self.allowed_tools),
             "state_keys": list(self.state.keys()),
             "route_entries": len(self.route_map)
         }

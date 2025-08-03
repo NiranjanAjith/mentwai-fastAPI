@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-import logging
 from pathlib import Path
 
 from fastapi import FastAPI, APIRouter
@@ -7,18 +6,18 @@ from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Import our AI services
-from app.api.v1.chat import router as chat_router
 from app.core.config import settings
+from app.core.logging import setup_logging, get_logger, Logger
 
+# Configure centralized logging with level from settings
+setup_logging(log_level=settings.LOG_LEVEL)
+logger = Logger(name="Server", log_file="startup") # get_logger(__name__)
+
+# Set up the root directory for loading environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from app.api.v1.chat import router as chat_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

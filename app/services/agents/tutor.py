@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Dict, Any, Optional, AsyncGenerator
 
+from app.core.logging import get_logger
+logger = get_logger(__name__)
+
 from app.framework.agents import Agent
 from app.services.tools.prompt import prompt_render
 from app.services.tools.llm import llm_client
@@ -20,8 +23,8 @@ class TutorAgent(Agent):
         query: Optional[str] = None,
         stream: bool = True
     ) -> AsyncGenerator[Dict[str, Any], None] | Dict[str, Any]:
-        self.logger.info(f"[TutorAgent] Started at {datetime.now().time()}")
-        self.logger.info(f"Query: {query}")
+        logger.info(f"[TutorAgent] Started at {datetime.now().time()}")
+        logger.info(f"Query: {query}")
 
         try:
             history = self.context.get_history(limit=4)
@@ -59,10 +62,10 @@ class TutorAgent(Agent):
                     delta = chunk.get("content", "")
                     if delta:
                         response_text += delta
-                        yield {"type": "chunk", "content": delta}
+                        yield {"is_end":False, "type": "chunk", "content": delta}
 
                 # cleaned = clean_math(response_text.strip())
-                yield {"type": "end", "content": response_text}
+                # yield {"type": "end", "content": response_text}
 
             else:
                 response_text = ""
@@ -78,19 +81,18 @@ class TutorAgent(Agent):
 
                 # cleaned = clean_math(response_text.strip())
                 yield {
+                    "is_end": True,
                     "status": "success",
                     "content": response_text
                 }
+            
+            logger.info(f"[TutorAgent] Finished at {datetime.now().time()}")
+            self.context.add_to_history("assistant", response_text)
 
         except Exception as e:
-            self.logger.error("TutorAgent error", exc_info=True)
-            if stream:
-                yield {
-                    "type": "error",
-                    "message": "Something went wrong while answering the question."
-                }
-            else:
-                yield {
-                    "status": "error",
-                    "message": "Something went wrong while answering the question."
-                }
+            logger.error("TutorAgent error", exc_info=True)
+            yield {
+                "is_end": True,
+                "status": "error",
+                "message": "Something went wrong while answering the question."
+            }

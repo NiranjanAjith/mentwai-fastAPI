@@ -1,9 +1,9 @@
 from __future__ import annotations
-import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict
 from abc import ABC, abstractmethod
+from app.core.logging import get_logger
 
 
 
@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 # --------------------------------------------------------------------------------
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # --------------------------------------------------------------------------------

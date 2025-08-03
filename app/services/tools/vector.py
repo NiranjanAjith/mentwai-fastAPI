@@ -1,12 +1,13 @@
 from app.framework.tools import Tool
-from typing import Dict, Any, List, AsyncGenerator
+from typing import Dict, Any, List
 from datetime import datetime
-import logging
 
 from pinecone import Pinecone
 
+from app.core.logging import get_logger
+logger = get_logger(__name__)
+
 from app.core.config import settings
-logger = logging.getLogger(__name__)
 
 
 

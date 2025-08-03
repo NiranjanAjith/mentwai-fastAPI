@@ -15,6 +15,7 @@ from app.services.tools.tables.textbook import (
 from app.services.tools.llm import llm_client
 from app.framework.context import BaseContext
 from app.core.config import settings
+from app.core.logging import get_logger
 
 
 
@@ -183,9 +184,14 @@ class TutorContext(BaseContext):
         if speaker not in ["user", "assistant"]:
             raise ValueError("Speaker must be 'user' or 'assistant'.")
         super().add_to_history(role=speaker, content=message)
+        
+        # Save history to S3 after adding a new entry
+        self._save_history_to_s3()
 
         if len(self.history) > 30:
             self._summarize_history()
+            # Save the summarized history to S3 again after summarization
+            self._save_history_to_s3()
 
     def _summarize_history(self):
         summary_prompt = (
@@ -204,3 +210,27 @@ class TutorContext(BaseContext):
     def clear_conversation_history(self):
         self.history.clear()
         self.logger.info("[HISTORY] Cleared conversation history.")
+        # Save empty history to S3
+        self._save_history_to_s3()
+        
+    def reset_context(self):
+        super().reset_context()
+        # Save empty history to S3 after reset
+        self._save_history_to_s3()
+        
+    def _save_history_to_s3(self):
+        """Save history to S3 bucket using session_id as the key."""
+        try:
+            import asyncio
+            from app.services.tools.storage import storage_client
+            
+            # Use session_id as the key
+            key = f"history_{self.session_id}"
+            
+            # Run in a separate thread to avoid blocking
+            asyncio.create_task(asyncio.to_thread(storage_client.save, key, self.history))
+            self.logger.debug(f"[HISTORY] Saving history to S3 with key: {key}")
+        except ImportError:
+            self.logger.warning("[HISTORY] S3 storage client not available, history not saved")
+        except Exception as e:
+            self.logger.error(f"[HISTORY] Failed to save history to S3: {e}")

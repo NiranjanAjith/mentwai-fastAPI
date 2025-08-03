@@ -10,8 +10,14 @@
 **/__pycache__
 **/*.pyc
 **/*.pyo
+**/.pytest_cache
 
 # Virtual Environments
 **/venv
 venv
 .env
+
+
+# Logs
+**/*.log
+**/logs

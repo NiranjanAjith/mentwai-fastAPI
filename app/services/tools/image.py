@@ -1,4 +1,3 @@
-import logging
 import os
 from typing import AsyncGenerator, Dict, Any, Optional, List, Union
 import tiktoken
@@ -7,10 +6,11 @@ from azure.ai.inference import ChatCompletionsClient
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.inference.models import SystemMessage, UserMessage
 
+from app.core.logging import get_logger
+logger = get_logger(__name__)
+
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings
-
-logger = logging.getLogger(__name__)
 
 
 

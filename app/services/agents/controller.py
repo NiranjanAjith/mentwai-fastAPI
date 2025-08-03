@@ -3,10 +3,13 @@ import regex
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from app.framework.agents import Agent
+from app.core.logging import get_logger
+logger = get_logger(__name__)
 
+from app.framework.agents import Agent
 from app.services.tools.llm import llm_client
 from app.services.tools.prompt import prompt_render
+
 
 
 class JailbreakDetector(Agent):
@@ -16,10 +19,11 @@ class JailbreakDetector(Agent):
     def __init__(self, context):
         super().__init__(context, name=self.name)
 
+
     async def run(self, query: Optional[str]) -> Dict[str, Any]:
         try:
-            self.logger.info(f"Jailbreak screening at {datetime.now().time()}")
-            self.logger.info(f"QUERY: {query}")
+            logger.info(f"Jailbreak screening at {datetime.now().time()}")
+            logger.info(f"QUERY: {query}")
             self.context.log["info"].append(f"Jailbreak screening at {datetime.now().time()}")
 
             history = self.get_from_context("history", [])[-4:]
@@ -31,7 +35,7 @@ class JailbreakDetector(Agent):
                     template_path="jailbreak/system.j2"
                 )
             except Exception as e:
-                self.logger.error(f"Failed to render system prompt: {e}")
+                logger.error(f"Failed to render system prompt: {e}")
                 self.context.log["error"].append(f"(Jailbreak Agent) Failed to render system prompt: {e}")
                 raise ValueError(f"(Jailbreak Agent) Failed to render system prompt. Please check your configuration. (Error: {e})")
                 
@@ -41,7 +45,7 @@ class JailbreakDetector(Agent):
                     variables={"user_query": query}
                 )
             except Exception as e:
-                self.logger.error(f"Failed to render user prompt: {e}")
+                logger.error(f"Failed to render user prompt: {e}")
                 self.context.log["error"].append(f"(Jailbreak Agent) Failed to render user prompt: {e}")
                 raise ValueError(f"(Jailbreak Agent) Failed to render user prompt. Please check your configuration. (Error: {e})")
 
@@ -69,13 +73,14 @@ class JailbreakDetector(Agent):
 
                 return metadata
             except Exception as e:
-                self.logger.error(f"LLM processing error: {e}")
+                logger.error(f"LLM processing error: {e}")
                 self.context.log["error"].append(f"(Jailbreak Agent) LLM processing error: {e}")
                 raise ValueError(f"(Jailbreak Agent) LLM processing error. Please check your configuration. (Error: {e})")
 
         except Exception as e:
-            self.logger.error("Jailbreak detection error", exc_info=True)
+            logger.error("Jailbreak detection error", exc_info=True)
             return self._failure(str(e))
+
 
     def _failure(self, message: str) -> Dict[str, Any]:
         return {

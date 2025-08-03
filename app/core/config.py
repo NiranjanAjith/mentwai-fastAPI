@@ -83,11 +83,20 @@ class Settings:
     # REDIS_POOL_SIZE: int = int(os.environ.get('REDIS_POOL_SIZE', 15))
     # REDIS_DEFAULT_TTL: int = int(os.environ.get('REDIS_DEFAULT_TTL', 600))
     
+    # AWS S3 Configuration
+    AWS_ACCESS_KEY_ID: str = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY: str = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_REGION: str = os.environ.get('AWS_REGION')
+    AWS_S3_BUCKET_NAME: str = os.environ.get('AWS_S3_BUCKET_NAME')
+    
     # Performance Configuration
     MAX_CONCURRENT_REQUESTS: int = int(os.environ.get('MAX_CONCURRENT_REQUESTS', 50))
     CONTEXT_RETRIEVAL_TIMEOUT: int = int(os.environ.get('CONTEXT_RETRIEVAL_TIMEOUT', 100))
     CLASSIFICATION_TIMEOUT: int = int(os.environ.get('CLASSIFICATION_TIMEOUT', 200))
     VECTOR_SEARCH_TIMEOUT: int = int(os.environ.get('VECTOR_SEARCH_TIMEOUT', 80))
+    
+    # Logging Configuration
+    LOG_LEVEL: str = os.environ.get('LOG_LEVEL', 'INFO')
 
 
 settings = Settings()
