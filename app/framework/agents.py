@@ -1,9 +1,9 @@
 from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
 from app.framework.context import BaseContext
-from app.core.logging import get_logger
+from app.core.logging import Logger
 
-logger = get_logger(__name__)
+logger = Logger(name="BaseAgent", log_file="Agent")
 
 
 # --------------------------------------------------------------------------------

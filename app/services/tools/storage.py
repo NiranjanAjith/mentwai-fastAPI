@@ -3,8 +3,8 @@ import boto3
 from botocore.exceptions import ClientError
 from typing import Dict, Any, Optional, List
 
-from app.core.logging import get_logger
-logger = get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="StorageTool", log_file="storage_tool")
 
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings

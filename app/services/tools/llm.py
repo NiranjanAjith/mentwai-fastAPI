@@ -1,4 +1,4 @@
-import os
+from datetime import datetime
 from typing import AsyncGenerator, Dict, Any, Optional, List, Union
 import tiktoken
 
@@ -6,8 +6,8 @@ from azure.ai.inference import ChatCompletionsClient
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
 
-from app.core.logging import get_logger
-logger = get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="LLM", log_file="LLM")
 
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings
@@ -145,7 +145,11 @@ class AzureLLM(LLMProvider):
         temperature: float,
         max_tokens: int
     ) -> AsyncGenerator[Dict[str, Any], None]:
+
+        start_time = datetime.now()
+        logger.info(f"Generation Start@ {start_time}")
         full_response = ""
+
         try:
             response = self.client.complete(
                 messages=messages,
@@ -166,6 +170,8 @@ class AzureLLM(LLMProvider):
                             "status_code": 6000,
                         }
 
+            end_time = datetime.now()
+            logger.info(f"Response Generation Duration: {end_time - start_time}")
             total_tokens = await self._log_tokens(prompt, full_response)
             yield {
                 "is_end": True,

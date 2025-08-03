@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Dict, Any, Optional, AsyncGenerator
 
-from app.core.logging import get_logger
-logger = get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="Tutor Agent", log_file="tutor_agent")
 
 from app.framework.agents import Agent
 from app.services.tools.prompt import prompt_render
@@ -18,12 +18,15 @@ class TutorAgent(Agent):
     def __init__(self, context):
         super().__init__(context, name=self.name)
 
+
     async def run(
         self,
         query: Optional[str] = None,
         stream: bool = True
     ) -> AsyncGenerator[Dict[str, Any], None] | Dict[str, Any]:
-        logger.info(f"[TutorAgent] Started at {datetime.now().time()}")
+        """Run the tutor agent to answer a student's question."""
+        start_time = datetime.now()
+        logger.info(f"TutorAgent Started at {start_time}")
         logger.info(f"Query: {query}")
 
         try:
@@ -31,21 +34,32 @@ class TutorAgent(Agent):
             context_chunks = self.context.get_rag_documents(limit=4)
             if not context_chunks:
                 retriever = vector_db
-                context_chunks = await retriever.run(query=query, top_k=4) ##TODO
-            
-            # Prepare prompts
-            prompt_tool = prompt_render
-            system_prompt = prompt_tool.render_from_file("tutor/system.j2", variables={
-                "student_name": self.context.student_name,
-                "subject_name": self.context.subject_name,
-                "standard": self.context.standard,
-                "educational_board": self.context.educational_board,
-                "current_date": datetime.now().strftime("%B %d, %Y")
-            })
-            user_prompt = prompt_tool.render_from_file("tutor/user.j2", variables={
-                "user_query": query,
-                "rag_documents": context_chunks
-            })
+                context_chunks = await retriever.run(query=query, top_k=4)
+            logger.info(f"Context chunks: {len(context_chunks)} retrieved.")
+
+            try:
+                # Prepare prompts
+                prompt_tool = prompt_render
+                system_prompt = prompt_tool.render_from_file("tutor/system.j2", variables={
+                    "student_name": self.context.student_name,
+                    "subject_name": self.context.subject_name,
+                    "standard": self.context.standard,
+                    "educational_board": self.context.educational_board,
+                    "current_date": datetime.now().strftime("%B %d, %Y")
+                })
+                user_prompt = prompt_tool.render_from_file("tutor/user.j2", variables={
+                    "user_query": query,
+                    "rag_documents": context_chunks
+                })
+                logger.info(f"Prompts rendered successfully.")
+            except Exception as e:
+                logger.error(f"Error rendering prompts: {e}")
+                yield {
+                    "is_end": True,
+                    "status": "error",
+                    "message": "Failed to render prompts."
+                }
+                return
 
             llm = llm_client
 
@@ -85,9 +99,11 @@ class TutorAgent(Agent):
                     "status": "success",
                     "content": response_text
                 }
-            
-            logger.info(f"[TutorAgent] Finished at {datetime.now().time()}")
+
+            end_time = datetime.now()
+            logger.info(f"TutorAgent Finished at {end_time}")
             self.context.add_to_history("assistant", response_text)
+            logger.info(f"Duration of TutorAgent: {end_time - start_time}")
 
         except Exception as e:
             logger.error("TutorAgent error", exc_info=True)

@@ -6,12 +6,8 @@ from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Import our AI services
-from app.core.config import settings
-from app.core.logging import setup_logging, get_logger, Logger
-
-# Configure centralized logging with level from settings
-setup_logging(log_level=settings.LOG_LEVEL)
-logger = Logger(name="Server", log_file="startup") # get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="Server", log_file="startup")
 
 # Set up the root directory for loading environment variables
 ROOT_DIR = Path(__file__).parent

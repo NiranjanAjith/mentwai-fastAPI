@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from app.core.constants import *
-from app.core.logging import get_logger
+from app.core.logging import Logger
 
 
 
@@ -14,7 +14,7 @@ from app.core.logging import get_logger
 class BaseContext:
     def __init__(self, project_name: str):
         # Constants
-        self.logger = get_logger(f"context.{project_name}")
+        self.logger = Logger(name=f"context.{project_name}", log_file=project_name)
         self.project_name = project_name
         self.session_id = str(uuid.uuid4())
         self.allowed_tools: Dict[str, Any] = {}

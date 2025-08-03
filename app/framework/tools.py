@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict
 from abc import ABC, abstractmethod
-from app.core.logging import get_logger
+from app.core.logging import Logger
 
 
 
@@ -12,7 +12,7 @@ from app.core.logging import get_logger
 # --------------------------------------------------------------------------------
 
 
-logger = get_logger(__name__)
+logger = Logger(name="BaseTool", log_file="Tool")
 
 
 # --------------------------------------------------------------------------------

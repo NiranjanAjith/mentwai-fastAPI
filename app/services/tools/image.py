@@ -6,8 +6,8 @@ from azure.ai.inference import ChatCompletionsClient
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.inference.models import SystemMessage, UserMessage
 
-from app.core.logging import get_logger
-logger = get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="VisionTool", log_file="VisionTool")
 
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings

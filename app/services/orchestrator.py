@@ -1,8 +1,9 @@
 import asyncio
 from uuid import UUID
+from datetime import datetime
 
-from app.core.logging import get_logger, Logger
-logger = Logger(name="Tutor Orchestrator", log_file="tutor_orchestration") # get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="Tutor Orchestrator", log_file="tutor_orchestration")
 
 from app.services.context.tutor_context import TutorContext
 from app.services.agents.controller import JailbreakDetector
@@ -48,25 +49,26 @@ class TutorOrchestrator:
             try:
                 context = TutorContext()
             except Exception as e:
-                logger.error(f"(TutorOrchestrator) Failed to initialize context: {e}")
+                logger.error(f"Failed to initialize context: {e}")
                 raise ValueError(f"(TutorOrchestrator) Failed to initialize context. Please check your configuration. (Error: {e})")
             try:
                 jailbreak_agent = JailbreakDetector(context)
-                logger.info("(TutorOrchestrator) Jailbreak agent initialized successfully.")
+                logger.info("Jailbreak agent initialized successfully.")
             except Exception as e:
                 context.log["error"].append(f"(TutorOrchestrator) Failed to initialize jailbreak agent: {e}")
-                logger.error(f"(TutorOrchestrator) Failed to initialize jailbreak agent: {e}")
+                logger.error(f"Failed to initialize jailbreak agent: {e}")
                 raise ValueError(f"Failed to initialize jailbreak agent. Please check your configuration. (Error: {e})")
             try:
                 tutor_agent = TutorAgent(context)
+                logger.info("Tutor agent initialized successfully.")
                 context.log["success"].append("(TutorOrchestrator) Tutor agent initialized successfully.")
             except Exception as e:
                 context.log["error"].append(f"(TutorOrchestrator) Failed to initialize tutor agent: {e}")
-                logger.error(f"(TutorOrchestrator) Failed to initialize tutor agent: {e}")
+                logger.error(f"Failed to initialize tutor agent: {e}")
                 raise ValueError(f"(TutorOrchestrator) Failed to initialize tutor agent. Please check your configuration. (Error: {e})")
         except Exception as e:
             context.log["error"].append(f"(TutorOrchestrator) Failed to initialize agents: {e}")
-            logger.error(f"(TutorOrchestrator) Failed to initialize agents: {e}")
+            logger.error(f"Failed to initialize agents: {e}")
             raise ValueError(f"(TutorOrchestrator) Failed to initialize agents. Please check your configuration. (Error: {e})")
         
         if session_id:
@@ -84,6 +86,7 @@ class TutorOrchestrator:
 
         try:
             await context.initialize(student_id, textbook_id)
+            logger.info(f"[+] Successfully initialized context for student {student_id} and textbook {textbook_id}")
             context.log["success"].append("Orchestrator context initialized successfully. (orchestrator.py)")
         except Exception as e:
             context.log["error"].append(f"Failed to initialize context: {e}")
@@ -96,6 +99,8 @@ class TutorOrchestrator:
 
 
     async def run(self, user_message: str, images: list = None):
+
+        start_time = datetime.now()
         full_user_query = user_message
         if images:
             image_tasks = [asyncio.create_task(vision_client.run(image_base64=image)) for image in images]
@@ -125,6 +130,8 @@ class TutorOrchestrator:
             response = chunk.get("content", "")
             full_response += response
             yield response
+
+        logger.info(f"Tutor Total Duration: {start_time - datetime.now()}")
 
 
     async def _fetch_relevant_docs(self, query: str):

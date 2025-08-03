@@ -2,8 +2,8 @@ from uuid import uuid4, UUID
 from typing import Dict
 from datetime import datetime
 
-from app.core.logging import get_logger, Logger
-logger = Logger(name="Chat", log_file="requests") # get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="Chat", log_file="requests")
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.orchestrator import TutorOrchestrator

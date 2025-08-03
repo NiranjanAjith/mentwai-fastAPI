@@ -40,7 +40,7 @@ class Logger:
         full_msg = f"[{timestamp}] [{self.name}] {colored_level} {message}"
 
         # Print to terminal
-        print(full_msg, flush=True)
+        print(full_msg)
 
         # Save to file if enabled
         if self.log_file:

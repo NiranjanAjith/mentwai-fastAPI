@@ -3,8 +3,8 @@ import regex
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from app.core.logging import get_logger
-logger = get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="JailbreakDetector", log_file="jailbreak")
 
 from app.framework.agents import Agent
 from app.services.tools.llm import llm_client
@@ -22,9 +22,10 @@ class JailbreakDetector(Agent):
 
     async def run(self, query: Optional[str]) -> Dict[str, Any]:
         try:
-            logger.info(f"Jailbreak screening at {datetime.now().time()}")
+            start_time = datetime.now()
+            logger.info(f"Jailbreak screening at {start_time}")
             logger.info(f"QUERY: {query}")
-            self.context.log["info"].append(f"Jailbreak screening at {datetime.now().time()}")
+            self.context.log["info"].append(f"Jailbreak screening at {start_time}")
 
             history = self.get_from_context("history", [])[-4:]
 
@@ -70,6 +71,8 @@ class JailbreakDetector(Agent):
                 metadata = json.loads(match.group(0))
                 if "query_status" not in metadata:
                     return self._failure("Missing 'query_status' in metadata.")
+                
+                logger.info(f"Jailbreak Screeng Duration: {start_time - datetime.now()}")
 
                 return metadata
             except Exception as e:

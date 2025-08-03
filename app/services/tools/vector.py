@@ -4,8 +4,8 @@ from datetime import datetime
 
 from pinecone import Pinecone
 
-from app.core.logging import get_logger
-logger = get_logger(__name__)
+from app.core.logging import Logger
+logger = Logger(name="VectorDB", log_file="vector_tool")
 
 from app.core.config import settings
 
