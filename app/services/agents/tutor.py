@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, AsyncGenerator
 
 from app.core.logging import Logger
-logger = Logger(name="Tutor Agent", log_file="tutor_agent")
+logger = Logger(name="Tutor Agent")
 
 from app.framework.agents import Agent
 from app.services.tools.prompt import prompt_render
@@ -103,7 +103,7 @@ class TutorAgent(Agent):
             end_time = datetime.now()
             logger.info(f"TutorAgent Finished at {end_time}")
             self.context.add_to_history("assistant", response_text)
-            logger.info(f"Duration of TutorAgent: {end_time - start_time}")
+            logger.performance(f"Duration of TutorAgent: {end_time - start_time}")
 
         except Exception as e:
             logger.error("TutorAgent error", exc_info=True)

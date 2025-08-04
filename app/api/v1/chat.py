@@ -3,7 +3,7 @@ from typing import Dict
 from datetime import datetime
 
 from app.core.logging import Logger
-logger = Logger(name="Chat", log_file="requests")
+logger = Logger(name="Chat")
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.orchestrator import TutorOrchestrator
@@ -56,6 +56,12 @@ async def websocket_endpoint(websocket: WebSocket):
             )
             active_sessions[session_id] = orchestrator
             logger.info(f"[+] New session {session_id}")
+        
+        await websocket.send_json({
+            "is_end": True,
+            "message": "Session Setup Complete",
+            "status_code": 6000
+        })
     except Exception as e:
         logger.error(f"[!] Failed to initialize session {session_id}: {e}")
         await websocket.send_json({
@@ -73,7 +79,7 @@ async def websocket_endpoint(websocket: WebSocket):
             user_query = data.get("message")
             images = data.get("images", [])
 
-            request_start_time = datetime.now()
+            request_start_time = datetime.now().time()
             async for response in orchestrator.run(user_query, images):
                 if response:
                     payload["response"] = response
@@ -85,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket):
             payload = {
                 "is_end": True,
                 "session_id": session_id,
-                "duration" : (datetime.now() - request_start_time).total_seconds(),
+                "duration" : datetime.now().time() - request_start_time,
                 "message": "Message Complete successfully."
             }
             if debug:

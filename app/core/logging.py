@@ -22,37 +22,30 @@ class Logger:
     }
 
 
-    def __init__(self, name="Logger", log_file=None, level="DEBUG"):
+    def __init__(self, name="Logger"):
         self.name = name
-        if log_file and not log_file.endswith(".csv"):
-            log_file += ".csv"
-        self.log_file = Path(os.path.join(LOG_DIR, log_file)) if log_file else None
-
-        if self.log_file:
-            self.log_file.parent.mkdir(parents=True, exist_ok=True)
-            if not self.log_file.exists():
-                self.log_file.write_text("")
 
 
-    def _log(self, level, message):
+    def _log(self, level, message, log_file=None):
         timestamp = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
         colored_level = f"{self.COLORS.get(level, '')}{level:<11}{self.COLORS['RESET']}"
         full_msg = f"[{timestamp}] [{self.name}] {colored_level} {message}"
 
         # Print to terminal
-        print(full_msg)
+        if level == "ERROR":
+            print(full_msg)
 
         # Save to file if enabled
-        if self.log_file:
+        if log_file:
             uncolored = f"[{timestamp}] [{self.name}] {level:<11} {message}"
-            with self.log_file.open("a", encoding="utf-8") as f:
+            with log_file.open("a", encoding="utf-8") as f:
                 f.write(uncolored + "\n")
 
 
-    def info(self, message): self._log("INFO", message)
-    def debug(self, message): self._log("DEBUG", message)
-    def warning(self, message): self._log("WARNING", message)
-    def error(self, message): self._log("ERROR", message)
-    def critical(self, message): self._log("CRITICAL", message)
-    def performance(self, message): self._log("PERFORMANCE", message)
-    def output(self, message): self._log("OUTPUT", message)
+    def info(self, message): self._log(level="INFO", message=message, log_file=Path(os.path.join(LOG_DIR, "operation.csv")))
+    def debug(self, message): self._log(level="DEBUG", message=message, log_file=Path(os.path.join(LOG_DIR, "operation.csv")))
+    def warning(self, message): self._log(level="WARNING", message=message, log_file=Path(os.path.join(LOG_DIR, "operation.csv")))
+    def error(self, message): self._log(level="ERROR", message=message, log_file=Path(os.path.join(LOG_DIR, "operation.csv")))
+    def critical(self, message): self._log(level="CRITICAL", message=message, log_file=Path(os.path.join(LOG_DIR, "operation.csv")))
+    def performance(self, message): self._log(level="PERFORMANCE", message=message, log_file=Path(os.path.join(LOG_DIR, "performance.csv")))
+    def output(self, message): self._log(level="OUTPUT", message=message, log_file=Path(os.path.join(LOG_DIR, "outputs.csv")))

@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 from typing import Dict, Any, Optional, List
 
 from app.core.logging import Logger
-logger = Logger(name="StorageTool", log_file="storage_tool")
+logger = Logger(name="StorageTool")
 
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings
@@ -72,6 +72,7 @@ class S3StorageProvider(StorageProvider):
         self.client = None
         super().__init__()
 
+
     def confirm_setup(self) -> bool:
         if not hasattr(settings, 'AWS_S3_BUCKET_NAME') or not settings.AWS_S3_BUCKET_NAME:
             raise ToolNotReadyError("AWS_S3_BUCKET_NAME not set in settings")
@@ -90,6 +91,7 @@ class S3StorageProvider(StorageProvider):
         except Exception as e:
             logger.error(f"[S3StorageProvider] Initialization failed: {e}")
             return False
+
 
     def save(self, key: str, data: Any) -> bool:
         """Save data to S3 bucket."""
@@ -112,6 +114,7 @@ class S3StorageProvider(StorageProvider):
         except ClientError as e:
             logger.error(f"[S3StorageProvider] Error saving data: {e}")
             return False
+
 
     def load(self, key: str) -> Any:
         """Load data from S3 bucket."""
@@ -138,6 +141,7 @@ class S3StorageProvider(StorageProvider):
             else:
                 logger.error(f"[S3StorageProvider] Error loading data: {e}")
                 raise
+
 
     def delete(self, key: str) -> bool:
         """Delete data from S3 bucket."""

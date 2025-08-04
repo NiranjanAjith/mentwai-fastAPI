@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime
 
 from app.core.logging import Logger
-logger = Logger(name="Tutor Orchestrator", log_file="tutor_orchestration")
+logger = Logger(name="Tutor Orchestrator")
 
 from app.services.context.tutor_context import TutorContext
 from app.services.agents.controller import JailbreakDetector
@@ -131,7 +131,7 @@ class TutorOrchestrator:
             full_response += response
             yield response
 
-        logger.info(f"Tutor Total Duration: {start_time - datetime.now()}")
+        logger.performance(f"Tutor Total Duration: {datetime.now() - start_time}")
 
 
     async def _fetch_relevant_docs(self, query: str):

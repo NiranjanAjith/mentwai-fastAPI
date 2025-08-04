@@ -5,7 +5,7 @@ from datetime import datetime
 from pinecone import Pinecone
 
 from app.core.logging import Logger
-logger = Logger(name="VectorDB", log_file="vector_tool")
+logger = Logger(name="VectorDB")
 
 from app.core.config import settings
 
@@ -45,6 +45,7 @@ class PineconeProvider(VectorTool):
         self.index = pc.Index(index_name)
         self.inference = pc.inference
 
+
     def confirm_setup(self):
         if self.index and self.inference:
             logger.info(f"[VectorDB] Pinecone index '{self.index.name}' is ready.")
@@ -52,6 +53,7 @@ class PineconeProvider(VectorTool):
         else:
             logger.error("[VectorDB] Pinecone index or inference client not initialized.")
             return False
+
 
     async def run(self, query: str, namespace:str, filters: dict= {}, top_k: int = 3):
         try:
@@ -61,16 +63,16 @@ class PineconeProvider(VectorTool):
         except Exception as e:
             return f"[VectorDB Error] {str(e)}"
 
+
     async def query(self, query: str, filters: dict, top_k: int = 3) -> list[Dict]:
         if not self.index:
             raise RuntimeError("Pinecone index not initialized.")
 
-        logger.info(f"Start Vector Store Search: {datetime.now().time()}")
+        start_time = datetime.now().time()
         embedding = self._embed_query(query)
         filter_conditions = self._build_filters(filters)
 
-        logger.info("\t=+=+=Pinecone Logs=+=+=")
-        logger.info(f"Metadata filters:\n{filter_conditions}\n")
+        logger.output(f"Metadata filters:\n{filter_conditions}\n")
 
         try:
             results = self.index.query(
@@ -85,13 +87,14 @@ class PineconeProvider(VectorTool):
             logger.error(f"Pinecone Querying Error: {e}")
             raise
 
-        logger.info(f"Vector Store Response Received: {datetime.now().time()}")
+        logger.performance(f"Vector Store Response Duration: {datetime.now().time() - start_time}")
 
         if not results or not results['matches']:
             logger.warning("No matching documents found in index")
             return ["No matches found in the textbook. Reply with a brief surface level explanation."]
 
         return self._format_results(results['matches'])
+
 
     def _embed_query(self, query: str) -> list[float]:
         try:
@@ -104,6 +107,7 @@ class PineconeProvider(VectorTool):
         except Exception as e:
             logger.error(f"Error generating embedding: {e}")
             raise RuntimeError(f"Failed to generate embedding: {e}")
+
 
     def _build_filters(self, filters: dict) -> dict:
         for key, value in filters.items():
@@ -119,6 +123,7 @@ class PineconeProvider(VectorTool):
                 {key: {"$eq": value}} for key, value in filters.items() if not isinstance(value, list)
             ]
         }
+
 
     def _format_results(self, matches: list[dict]) -> list[Dict]:
         formatted = []

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from app.framework.context import BaseContext
 from app.core.logging import Logger
 
-logger = Logger(name="BaseAgent", log_file="Agent")
+logger = Logger(name="BaseAgent")
 
 
 # --------------------------------------------------------------------------------

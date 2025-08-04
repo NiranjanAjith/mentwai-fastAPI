@@ -40,8 +40,8 @@ def test_interactive_ws():
 
     with client.websocket_connect(ws_url) as websocket:
         print("\n🔄 Enter queries to test the WebSocket. Type 'exit' to stop.\n")
-        # response = websocket.receive_json()
-        # print("✅ Received:", response)
+        response = websocket.receive_json()
+        print("✅ Received:", response)
         while True:
             query = input("\nYour Query: ").strip()
             if query.lower() == "exit":

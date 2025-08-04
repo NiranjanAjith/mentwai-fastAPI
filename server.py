@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 # Import our AI services
 from app.core.logging import Logger
-logger = Logger(name="Server", log_file="startup")
+logger = Logger(name="Server")
 
 # Set up the root directory for loading environment variables
 ROOT_DIR = Path(__file__).parent
@@ -29,6 +29,9 @@ async def lifespan(app: FastAPI):
 
     """Cleanup on shutdown."""
     logger.info("🛑 AI Tutor Service shutting down...")
+    logger.info("\n"*5)
+    logger.output("\n"*5)
+    logger.performance("\n"*5)
     try:
         logger.info("✅ Cleanup completed")
     except Exception as e:

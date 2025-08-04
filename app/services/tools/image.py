@@ -1,4 +1,4 @@
-import os
+from datetime import datetime
 from typing import AsyncGenerator, Dict, Any, Optional, List, Union
 import tiktoken
 
@@ -7,7 +7,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.ai.inference.models import SystemMessage, UserMessage
 
 from app.core.logging import Logger
-logger = Logger(name="VisionTool", log_file="VisionTool")
+logger = Logger(name="VisionTool")
 
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings
@@ -76,12 +76,15 @@ class AzureVision(ViTProvider):
     version: str = "1.0"
     tags: list[str] = ViTProvider.tags + ["azure", ]
 
+
     def __init__(self):
         self.model = settings.VISION_MODEL # "Llama-3.2-Vision-90B-Instruct"
         self.endpoint = settings.AZURE_ENDPOINT
         self.api_key = settings.AZURE_KEY
         self.client: Optional[ChatCompletionsClient] = None
         super().__init__()
+
+
     def confirm_setup(self) -> bool:
         if not self.api_key:
             raise ToolNotReadyError("AZURE_FOUNDRY_API_KEY not set")
@@ -95,6 +98,7 @@ class AzureVision(ViTProvider):
         except Exception as e:
             logger.error(f"[AzureLLMProvider] Initialization failed: {e}")
             return False
+
 
     def convert_messages(self, messages: List[dict], image_base64= None) -> List:
         """
@@ -116,7 +120,9 @@ class AzureVision(ViTProvider):
             ])
         ]
 
-    async def run(self, image_base64, messages: List[dict]) -> AsyncGenerator[Dict, None]:
+
+    async def run(self, image_base64, messages: List[dict]= []) -> AsyncGenerator[Dict, None]:
+        start_time = datetime.now().time()
         if not image_base64:
             yield {
                 "error": "Image base64 data is required",
@@ -125,6 +131,9 @@ class AzureVision(ViTProvider):
             return
         formatted_messages = self.convert_messages(messages, image_base64=image_base64)
         yield self.non_stream(formatted_messages)
+        logger.performance(f"Image Processing Duration: {datetime.now().time() - start_time}")
+        return
+
 
     async def non_stream(self, formatted_messages: List) -> AsyncGenerator[Dict, None]:
         """
@@ -156,6 +165,7 @@ class AzureVision(ViTProvider):
                 "tokens": 0
             }
 
+
     async def _log_tokens(self, prompt: List, output: str) -> int:
         try:
             system_text = prompt[0].content
@@ -165,7 +175,7 @@ class AzureVision(ViTProvider):
             input_tokens = tokenizer.encode(prompt_text)
             output_tokens = tokenizer.encode(output)
             total_tokens = len(input_tokens) + len(output_tokens)
-            logger.info(f"[AzureLLM] Token count: {total_tokens}")
+            logger.info(f"[AzureViT] Token count: {total_tokens}")
             return total_tokens
         
         except Exception as e:

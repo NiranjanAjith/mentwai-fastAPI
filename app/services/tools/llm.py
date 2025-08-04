@@ -7,7 +7,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.ai.inference.models import SystemMessage, UserMessage, AssistantMessage
 
 from app.core.logging import Logger
-logger = Logger(name="LLM", log_file="LLM")
+logger = Logger(name="LLM")
 
 from app.framework.tools import Tool, ToolNotReadyError
 from app.core.config import settings
@@ -171,8 +171,10 @@ class AzureLLM(LLMProvider):
                         }
 
             end_time = datetime.now()
-            logger.info(f"Response Generation Duration: {end_time - start_time}")
+            logger.performance(f"Response Generation Duration: {end_time - start_time}")
+            logger.output(f"Input:\n{prompt}\n{messages}\n\nResponse:\n{full_response}")
             total_tokens = await self._log_tokens(prompt, full_response)
+
             yield {
                 "is_end": True,
                 "content": "",
@@ -182,6 +184,9 @@ class AzureLLM(LLMProvider):
 
         except Exception as e:
             logger.error(f"Streaming error: {e}")
+            end_time = datetime.now()
+            logger.performance(f"Response Generation Duration: {end_time - start_time}")
+
             yield {
                 "is_end": True,
                 "content": "",

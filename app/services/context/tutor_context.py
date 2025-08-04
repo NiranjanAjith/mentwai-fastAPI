@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlmodel import select
 
 from app.core.logging import Logger
-logger = Logger(name="Tutor Context", log_file="tutor_context")
+logger = Logger(name="Tutor Context")
 
 from app.services.tools.llm import llm_client
 from app.framework.context import BaseContext

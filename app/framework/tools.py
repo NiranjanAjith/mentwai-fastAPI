@@ -12,7 +12,7 @@ from app.core.logging import Logger
 # --------------------------------------------------------------------------------
 
 
-logger = Logger(name="BaseTool", log_file="Tool")
+logger = Logger(name="BaseTool")
 
 
 # --------------------------------------------------------------------------------
