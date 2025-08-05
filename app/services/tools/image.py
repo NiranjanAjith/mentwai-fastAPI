@@ -122,7 +122,7 @@ class AzureVision(ViTProvider):
 
 
     async def run(self, image_base64, messages: List[dict]= []) -> AsyncGenerator[Dict, None]:
-        start_time = datetime.now().time()
+        start_time = datetime.now()
         if not image_base64:
             yield {
                 "error": "Image base64 data is required",
@@ -131,7 +131,7 @@ class AzureVision(ViTProvider):
             return
         formatted_messages = self.convert_messages(messages, image_base64=image_base64)
         yield self.non_stream(formatted_messages)
-        logger.performance(f"Image Processing Duration: {datetime.now().time() - start_time}")
+        logger.performance(f"Image Processing Duration: {(datetime.now() - start_time).total_seconds()}")
         return
 
 

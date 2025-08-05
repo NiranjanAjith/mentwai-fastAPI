@@ -75,7 +75,7 @@ class TutorOrchestrator:
             context.session_id = session_id
             # Load history from S3 if session_id is provided
             try:
-                history_data = await asyncio.to_thread(storage_client.load, f"history_{session_id}")
+                history_data = await asyncio.to_thread(storage_client.load, f"history_{session_id}.json")
                 if history_data and isinstance(history_data, list):
                     context.history = history_data
                     context.log["success"].append(f"Loaded {len(history_data)} history entries from S3 for session {session_id}")
@@ -149,6 +149,9 @@ class TutorOrchestrator:
             self.context.add_rag_document(doc if isinstance(doc, str) else doc.get("text", ""))
 
         logger.info(f"[VECTOR] Retrieved {len(results)} documents.")
+
+
+    async def close(self): await self.context.close()
 
 
 

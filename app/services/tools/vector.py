@@ -68,7 +68,7 @@ class PineconeProvider(VectorTool):
         if not self.index:
             raise RuntimeError("Pinecone index not initialized.")
 
-        start_time = datetime.now().time()
+        start_time = datetime.now()
         embedding = self._embed_query(query)
         filter_conditions = self._build_filters(filters)
 
@@ -87,7 +87,7 @@ class PineconeProvider(VectorTool):
             logger.error(f"Pinecone Querying Error: {e}")
             raise
 
-        logger.performance(f"Vector Store Response Duration: {datetime.now().time() - start_time}")
+        logger.performance(f"Vector Store Response Duration: {(datetime.now() - start_time).total_seconds()}")
 
         if not results or not results['matches']:
             logger.warning("No matching documents found in index")

@@ -1,7 +1,9 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, select
 from typing import Optional
 from datetime import date
 from uuid import UUID, uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 
 class Student(SQLModel, table=True):
@@ -32,3 +34,25 @@ class StudentTokenUsage(SQLModel, table=True):
     token_used: int = 0
     image_count: int = 0
     date_added: Optional[date] = None
+
+
+
+async def ensure_student(session: AsyncSession, student_id: Optional[UUID]) -> UUID:
+    if student_id:
+        return student_id
+
+    # Lookup anonymous user/student by username/email/etc.
+    result = await session.execute(
+        select(Student).where(Student.name == "Anonymous")
+    )
+    student = result.scalar_one_or_none()
+
+    if student:
+        return student.id
+
+    # Else create one
+    new_student = Student(name="Anonymous")
+    session.add(new_student)
+    await session.commit()
+    await session.refresh(new_student)
+    return new_student.id

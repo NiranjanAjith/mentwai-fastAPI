@@ -12,7 +12,7 @@ student_id = "0148e9a4-91fd-4c32-8d43-0c7005b0b7b3"
 textbook_id = "9e3628e8-8114-4db4-99a7-bf72710037d8"
 token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY4ODkyMDI2LCJpYXQiOjE3NTA3NDgwMjYsImp0aSI6IjNlZDg0ZmJlOWRkMTQ3MDFiZDIwZDMwMDc4N2FmMTM0IiwidXNlcl9pZCI6Mn0.-tTDzztYwVq1558NUN8CLMYVUY4OskQZX-lpEH8ZV_I"
 
-session_id = "be77006b-2286-46f1-be0f-f60e9fd41024"
+# session_id = "be77006b-2286-46f1-be0f-f60e9fd41024"
 images = []
 queries = []
 
@@ -35,7 +35,7 @@ def prepare_payload(query:str = "", images:list = []):
 
 def test_interactive_ws():
     """Interactive test: send custom queries to the WebSocket and print responses."""
-    ws_url = f"/api/v1/chat/ws?student_id={student_id}&textbook_id={textbook_id}&token={token}&debug=true&session_id={session_id}"    
+    ws_url = f"/api/v1/chat/ws?student_id={student_id}&textbook_id={textbook_id}&token={token}&debug=true&"#session_id={session_id}"    
     response = {}
 
     with client.websocket_connect(ws_url) as websocket:

@@ -31,7 +31,7 @@ async def test_s3_history_persistence():
     await asyncio.sleep(2)
     
     # Try to load the history from S3
-    key = f"history_{session_id}"
+    key = f"history_{session_id}.json"
     history_data = await asyncio.to_thread(storage_client.load, key)
     
     if history_data:

@@ -79,19 +79,18 @@ async def websocket_endpoint(websocket: WebSocket):
             user_query = data.get("message")
             images = data.get("images", [])
 
-            request_start_time = datetime.now().time()
+            request_start_time = datetime.now()
             async for response in orchestrator.run(user_query, images):
                 if response:
                     payload["response"] = response
                     payload["response_type"] = type(response).__name__
 
                     await websocket.send_json(payload)
-            request_start_time = datetime.now()
 
             payload = {
                 "is_end": True,
-                "session_id": session_id,
-                "duration" : datetime.now().time() - request_start_time,
+                "session_id": str(session_id),
+                "duration" : (datetime.now() - request_start_time).total_seconds(),
                 "message": "Message Complete successfully."
             }
             if debug:
@@ -104,6 +103,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
     finally:
         active_sessions.pop(session_id, None)
+        await orchestrator.close()
         logger.info(f"[-] WebSocket connection closed for {websocket.client.host} @ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         await websocket.close()

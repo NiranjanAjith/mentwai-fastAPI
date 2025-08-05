@@ -171,7 +171,7 @@ class AzureLLM(LLMProvider):
                         }
 
             end_time = datetime.now()
-            logger.performance(f"Response Generation Duration: {end_time - start_time}")
+            logger.performance(f"Response Generation Duration: {(end_time - start_time).total_seconds()}")
             logger.output(f"Input:\n{prompt}\n{messages}\n\nResponse:\n{full_response}")
             total_tokens = await self._log_tokens(prompt, full_response)
 
@@ -185,7 +185,7 @@ class AzureLLM(LLMProvider):
         except Exception as e:
             logger.error(f"Streaming error: {e}")
             end_time = datetime.now()
-            logger.performance(f"Response Generation Duration: {end_time - start_time}")
+            logger.performance(f"Response Generation Duration: {(end_time - start_time).total_seconds()}")
 
             yield {
                 "is_end": True,

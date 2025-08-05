@@ -2,7 +2,9 @@ from datetime import timezone, datetime
 from typing import List
 from uuid import UUID
 
-from sqlmodel import select
+# from sqlmodel import select
+from sqlalchemy import select, func
+# from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import Logger
 logger = Logger(name="Tutor Context")
@@ -10,7 +12,7 @@ logger = Logger(name="Tutor Context")
 from app.services.tools.llm import llm_client
 from app.framework.context import BaseContext
 from app.core.config import settings
-from app.services.tools.tables.student import Student, StudentTokenUsage
+from app.services.tools.tables.student import Student, StudentTokenUsage, ensure_student
 from app.services.tools.tables.textbook import (
     TextBook,
     Subject,
@@ -18,6 +20,8 @@ from app.services.tools.tables.textbook import (
     Standard,
     TextBookStandardLink
 )
+from app.services.tools.tables.chat_history import ChatSession
+from app.services.tools.tables.base_table import populate_base_fields
 
 
 
@@ -192,6 +196,30 @@ class TutorContext(BaseContext):
             raise ValueError(f"Failed to update student token usage in DB. (_update_student_token_usage Error: {e})")
 
 
+    async def create_chat_session(self) -> ChatSession:
+        
+        async with settings.get_session() as session:
+            student_id = await ensure_student(session, self.student_id)
+
+            existing_session = await session.scalar(select(ChatSession).where(ChatSession.file_path == str(self.session_id)))
+            if existing_session:
+                self.logger.info(f"[CHAT SESSION] Skipped: Session already exists for ID: {self.session_id}")
+                return
+
+            chat_session = ChatSession(
+                student_id=student_id,
+                textbook_id=self.textbook_id,
+                title=self.get_history()[0]["content"][:15],
+                history=self.get_history()[-1]["content"],
+                file_path=str(self.session_id),
+            )
+            chat_session = await populate_base_fields(chat_session, student_id)
+            session.add(chat_session)
+            await session.commit()
+            await session.refresh(chat_session)
+            return
+
+
     # RAG Documents
     def add_rag_document(self, document: str):
         if not isinstance(document, str):
@@ -229,7 +257,7 @@ class TutorContext(BaseContext):
         messages = self.get_history()
         summary = llm_client.run(
             prompt=summary_prompt,
-            context=messages,
+            history=messages,
             temperature=0.3
         )
         self.history = [{"role": "assistant", "content": f"Summary so far:\n\n'''{summary}'''"}]
@@ -256,7 +284,7 @@ class TutorContext(BaseContext):
             from app.services.tools.storage import storage_client
             
             # Use session_id as the key
-            key = f"history_{self.session_id}"
+            key = f"history_{self.session_id}.json"
             
             # Run in a separate thread to avoid blocking
             asyncio.create_task(asyncio.to_thread(storage_client.save, key, self.history))
@@ -265,3 +293,13 @@ class TutorContext(BaseContext):
             self.logger.warning("[HISTORY] S3 storage client not available, history not saved")
         except Exception as e:
             self.logger.error(f"[HISTORY] Failed to save history to S3: {e}")
+
+
+    async def close(self):
+        """Context cleanup"""
+
+        if len(self.history)>0:
+            await self.create_chat_session()
+
+
+
